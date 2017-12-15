@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="assignment3.ui_controls.DB2PaneController"
+            minHeight="300.0" minWidth="300.0" prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="2">
+<children>
+    <Label alignment="CENTER" layoutX="238.0" layoutY="14.0" text="Database 2" AnchorPane.leftAnchor="100.0" AnchorPane.rightAnchor="100.0" AnchorPane.topAnchor="15.0" />
+    <TableView fx:id="table" layoutX="127.0" layoutY="93.0" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="50.0">
+        <columns>
+            <TableColumn fx:id="flightNumberColumn" editable="false" prefWidth="75.0" sortable="false" text="Flight" />
+            <TableColumn fx:id="departureColumn" editable="false" prefWidth="100.0" sortable="false" text="Departure" />
+            <TableColumn fx:id="gateColumn" editable="false" prefWidth="93.0" sortable="false" text="Gate" />
+            <TableColumn fx:id="statusColumn" editable="false" prefWidth="90.0" sortable="false" text="Status" />
+        </columns>
+        <columnResizePolicy>
+            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+        </columnResizePolicy>
+    </TableView>
+</children>
+</AnchorPane>
