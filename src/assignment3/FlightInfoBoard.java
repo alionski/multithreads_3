@@ -17,8 +17,8 @@ import java.util.concurrent.Semaphore;
 public class FlightInfoBoard {
     private Controller ctrl;
     private ArrayList<Flight> flights = new ArrayList<>();
-    private Semaphore writerLock;
-    private Semaphore readerMutex;
+    private Semaphore writeSemaphore;
+    private Semaphore readSemaphore;
     private int readerCount;
     private int now = 1200;
     private Timer timer;
@@ -29,8 +29,8 @@ public class FlightInfoBoard {
 	 */
 	public FlightInfoBoard(Controller controller) {
         ctrl = controller;
-        writerLock = new Semaphore(1);
-        readerMutex = new Semaphore(1);
+        writeSemaphore = new Semaphore(3);
+        readSemaphore = new Semaphore(0);
     }
 
 	/**
@@ -41,12 +41,12 @@ public class FlightInfoBoard {
 	 */
 	public void put(Flight flight) {
         try {
-            writerLock.acquire(); // going to get blocked if a reader has the mutex
+            writeSemaphore.acquire(); // going to get blocked if a reader has the mutex
 
 			flights.add(flight);
             Collections.sort(flights); // added sorting just to make the method do a little bit more than just put flights
 
-            writerLock.release();
+            readSemaphore.release();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -64,20 +64,11 @@ public class FlightInfoBoard {
         ArrayList<Flight> newFlights = null;
 
         try {
-			readerMutex.acquire(); // now get the reading lock
-			readerCount++;
-            if (readerCount == 1) { // get the write lock if we are the first reading thread
-                writerLock.acquire();
-            }
-			readerMutex.release();
+			readSemaphore.acquire(); // now get the reading lock
 
-            newFlights = (ArrayList<Flight>)flights.clone();
+			newFlights = (ArrayList<Flight>)flights.clone();
 
-			readerMutex.acquire();
-			if (readerCount == 1) { // release the write lock if we are the last to leave
-                writerLock.release();
-            }
-			readerMutex.release(); // release the read lock
+			writeSemaphore.release();
 
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -98,11 +89,11 @@ public class FlightInfoBoard {
         }
 
         try {
-            writerLock.acquire();
+            writeSemaphore.acquire();
 
             updateTime();
 
-            writerLock.release();
+            readSemaphore.release();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -164,6 +155,7 @@ public class FlightInfoBoard {
                     e.printStackTrace();
                 }
             }
+			System.out.println("Timer is dying");
         }
 
         public void kill() {
