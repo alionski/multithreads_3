@@ -10,8 +10,8 @@ import java.util.concurrent.Semaphore;
 /**
  * The "repository" class that keeps the data from the database put by writer threads and serves it to the reader threads.
  * It follows the Reader-Writer model, meaning the writers have exclusive access to the data, and the readers do not
- * modify the data; all of the readers are allowed to read at the same time, but only one writer can write at a time, and no reader
- * is allowed to read while the writer has the writer lock.
+ * modify the data. Writers and readers notify each other via semaphore permits when data has been written or read. In this
+ * solution, only one writer is allowed into CS, and it is also true for readers.
  * @author Alena Hramyka
  */
 public class FlightInfoBoard {
@@ -19,7 +19,7 @@ public class FlightInfoBoard {
     private ArrayList<Flight> flights = new ArrayList<>();
     private Semaphore writeSemaphore;
     private Semaphore readSemaphore;
-    private int readerCount;
+    private Semaphore mutex;
     private int now = 1200;
     private Timer timer;
 
@@ -29,24 +29,33 @@ public class FlightInfoBoard {
 	 */
 	public FlightInfoBoard(Controller controller) {
         ctrl = controller;
-        writeSemaphore = new Semaphore(3);
+        writeSemaphore = new Semaphore(31);
         readSemaphore = new Semaphore(0);
+        mutex = new Semaphore(1);
     }
 
 	/**
 	 * Method called by writers when they want to add a new flight to the list.
-	 * Writer acquires a writer lock (blocks if is kept by a reader thread), adds a flight and sorts the updated list.
-	 * Releases the lock afterwards.
+	 * Writer acquires a permit from the write semaphore
+	 * (blocks if is kept by a reader thread, but not the first time since it's initialised with 1),
+	 * adds a flight and sorts the updated list. Releases a write permit afterwards, i.e. a waiting reader can now enter CS.
 	 * @param flight -- new Flight object to add to the list.
 	 */
 	public void put(Flight flight) {
         try {
-            writeSemaphore.acquire(); // going to get blocked if a reader has the mutex
 
+            writeSemaphore.acquire(); // there is initially one permit, i.e a writer is guaranteed to write first.
+			System.out.println("Writer got permit, number left: " + writeSemaphore.availablePermits());
+
+			mutex.acquire();
 			flights.add(flight);
-            Collections.sort(flights); // added sorting just to make the method do a little bit more than just put flights
+            Collections.sort(flights);
+            mutex.release();
 
-            readSemaphore.release();
+			System.out.println("Reader permit released, number left: " + (readSemaphore.availablePermits()+1));
+			readSemaphore.release(); // after the first writing, the first reading permit is released, and one
+			// reading thread is allowed to read; before it, it is waiting for a permit.
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -54,20 +63,25 @@ public class FlightInfoBoard {
 
 	/**
 	 * Method called by readers when they want to get the updated list with flights.
-	 * A reader must first get a mutex and then check if it's he first reader to enter, and if so,
-	 * it also gets the writer lock and then releases the mutex.
-	 * Then it copies the updated list with flights, after which it checks if it's the last reade to leave, does the
-	 * same locking-unlocking but in the reverse.
+	 * A reader must first get a permit, which is only released after the first write.
+	 * I.e., in this solution, only one reader can read at the same time, all the others in queue have to wait
+	 * for a new permit to be issue by a writer.
+	 * At the end it issues a permit to write, i.e. one write can be performed after one read.
 	 * @return -- ArrayList with updated flights.
 	 */
 	public ArrayList<Flight> get() {
         ArrayList<Flight> newFlights = null;
 
         try {
-			readSemaphore.acquire(); // now get the reading lock
 
+			readSemaphore.acquire();
+			System.out.println("Reader got permit, number left: " + readSemaphore.availablePermits());
+
+			mutex.acquire();
 			newFlights = (ArrayList<Flight>)flights.clone();
+			mutex.release();
 
+			System.out.println("Write permit released, number left: " + (writeSemaphore.availablePermits()+1));
 			writeSemaphore.release();
 
         } catch (InterruptedException e) {
@@ -90,14 +104,17 @@ public class FlightInfoBoard {
 
         try {
             writeSemaphore.acquire();
+            System.out.println("Writer got permit, number left: " + writeSemaphore.availablePermits());
 
+            mutex.acquire();
             updateTime();
+            mutex.release();
 
+            System.out.println("Reader permit released, number left: " + (readSemaphore.availablePermits()+1));
             readSemaphore.release();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
     }
 
 	/**
@@ -146,7 +163,7 @@ public class FlightInfoBoard {
                     now += 10;
                 }
 
-                System.out.println(now);
+//                System.out.println(now);
                 Platform.runLater( () -> ctrl.updateTimerLabel(now));
 
                 try {

@@ -49,6 +49,7 @@ public abstract class BaseThread extends Thread {
             sleep(rand.nextInt(milisec));
         } catch (InterruptedException e) {
             e.printStackTrace();
+            System.out.print("THREAD IS DYING");
         }
     }
 }

@@ -37,13 +37,13 @@ public class TerminalThread extends BaseThread {
 	public void run() {
         while(isRunning) {
 
-            ArrayList<Flight> newList = board.get();
-            list.clear();
-            list.addAll(newList);
+			ArrayList<Flight> newList = board.get();
+			list.clear();
+			list.addAll(newList);
 
 //            Platform.runLater( () -> table.scrollTo(list.size()-1));
 
-            nap(3000);
+			nap(3000);
         }
 
         System.out.println(this.getName() + "is dying");

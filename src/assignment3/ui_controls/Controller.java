@@ -64,12 +64,12 @@ public class Controller {
 	public void stopThreads() {
         board.stopTimer();
 
+		terminal1Controller.stopThread();
+		terminal2Controller.stopThread();
+		terminal3Controller.stopThread();
+
         db1PaneController.stopThread();
         db2PaneController.stopThread();
-
-        terminal1Controller.stopThread();
-        terminal2Controller.stopThread();
-        terminal3Controller.stopThread();
 
         Platform.exit();
     }
